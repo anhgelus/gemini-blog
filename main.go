@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"git.sr.ht/~sotirisp/go-gemini"
 	"git.sr.ht/~sotirisp/go-gemini/certificate"
@@ -17,11 +18,15 @@ type Config struct {
 }
 
 var (
-	configFile = "config.toml"
+	configFile   = "config.toml"
+	certsFolder  = "certs"
+	publicFolder = "public"
 )
 
 func init() {
 	flag.StringVar(&configFile, "config", configFile, "config file")
+	flag.StringVar(&certsFolder, "certs-folder", certsFolder, "certificates folder")
+	flag.StringVar(&publicFolder, "public-folder", publicFolder, "public folder")
 }
 
 func main() {
@@ -36,14 +41,21 @@ func main() {
 		panic(err)
 	}
 
+	if err = os.Mkdir(certsFolder, 0755); err != nil && !errors.Is(err, os.ErrExist) {
+		panic(err)
+	}
+	if err = os.Mkdir(publicFolder, 0755); err != nil && !errors.Is(err, os.ErrExist) {
+		panic(err)
+	}
+
 	certificates := &certificate.Store{}
 	certificates.Register(cfg.Domain)
-	if err = certificates.Load("certs"); err != nil {
+	if err = certificates.Load(certsFolder); err != nil {
 		panic(err)
 	}
 
 	mux := &gemini.Mux{}
-	mux.Handle("/", gemini.FileServer(os.DirFS("public")))
+	mux.Handle("/", gemini.FileServer(os.DirFS(publicFolder)))
 
 	server := &gemini.Server{
 		Handler:        gemini.LoggingMiddleware(mux),
@@ -52,13 +64,14 @@ func main() {
 		GetCertificate: certificates.Get,
 	}
 
-	// starts
+	// starts the server
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
 	errCh := make(chan error)
 	go func() {
 		ctx := context.Background()
+		slog.Info("Starting...")
 		errCh <- server.ListenAndServe(ctx)
 	}()
 
