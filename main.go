@@ -9,7 +9,6 @@ import (
 	"git.sr.ht/~sotirisp/go-gemini"
 	"git.sr.ht/~sotirisp/go-gemini/certificate"
 	"github.com/BurntSushi/toml"
-	"io/fs"
 	"log/slog"
 	"mime"
 	"os"
@@ -18,9 +17,12 @@ import (
 )
 
 type Config struct {
-	Domain      string `toml:"domain"`
-	Duration    uint   `toml:"duration"`
-	FilmDisplay string `toml:"film_display"`
+	Domain   string `toml:"domain"`
+	Duration uint   `toml:"duration"`
+	Film     struct {
+		Index   string `toml:"index"`
+		Display string `toml:"display"`
+	} `toml:"film"`
 }
 
 var (
@@ -28,8 +30,6 @@ var (
 	certsFolder  = "certs"
 	publicFolder = "public"
 	filmsFolder  = "films"
-
-	filmsContent fs.FS
 
 	cfg Config
 )
@@ -60,8 +60,6 @@ func main() {
 	createFolder(publicFolder)
 	createFolder(filmsFolder)
 
-	filmsContent = os.DirFS(filmsFolder)
-
 	certs := &certificate.Store{}
 	certs.CreateCertificate = func(scope string) (tls.Certificate, error) {
 		options := certificate.CreateOptions{
@@ -80,7 +78,8 @@ func main() {
 	}
 
 	mux := &gemini.Mux{}
-	mux.HandleFunc("/films/", filmsHandler)
+	mux.HandleFunc("/films/", handleFilms)
+	mux.HandleFunc("/film", handleFilmsHome)
 	mux.Handle("/", gemini.FileServer(os.DirFS(publicFolder)))
 
 	server := &gemini.Server{

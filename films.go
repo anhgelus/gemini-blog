@@ -34,44 +34,61 @@ var (
 	}
 )
 
-func filmsHandler(ctx context.Context, w gemini.ResponseWriter, r *gemini.Request) {
+func handleFilms(ctx context.Context, w gemini.ResponseWriter, r *gemini.Request) {
 	path := r.URL.Path[len("/films"):]
+	if path == "/" || path == "/index.gmi" {
+		handleFilmsHome(ctx, w, r)
+		return
+	}
 	b, err := os.ReadFile(strings.TrimSuffix(filmsFolder, "/") + path + ".toml")
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			w.WriteHeader(gemini.StatusNotFound, "Not found")
 			return
 		} else {
-			slog.Error("Error while reading file", "err", err, "path", path)
+			slog.Error("Error while reading file", "err", err, "path", r.URL.Path)
 			w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
 			return
 		}
 	}
 	var filmCfg FilmConfig
 	if err = toml.Unmarshal(b, &filmCfg); err != nil {
-		slog.Error("Error while parsing file", "err", err, "path", path)
+		slog.Error("Error while parsing file", "err", err, "path", r.URL.Path)
 		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
 		return
 	}
-	//TODO: render file
-	t, err := renderFile()
+	t, err := loadTemplate(cfg.Film.Display)
 	if err != nil {
-		slog.Error("Error while parsing template", "err", err, "path", path)
+		slog.Error("Error while parsing template", "err", err, "path", r.URL.Path)
 		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
 		return
 	}
 
 	if err = t.Execute(w, filmCfg); err != nil {
-		slog.Error("Error while rendering", "err", err, "path", path)
+		slog.Error("Error while rendering", "err", err, "path", r.URL.Path)
 		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
+		return
 	}
-	w.WriteHeader(gemini.StatusSuccess, "Found")
 }
 
-func renderFile() (*template.Template, error) {
+func handleFilmsHome(_ context.Context, w gemini.ResponseWriter, _ *gemini.Request) {
+	t, err := loadTemplate(cfg.Film.Index)
+	if err != nil {
+		slog.Error("Error while parsing template", "err", err, "path", "/films/index.gmi")
+		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
+		return
+	}
+	err = t.Execute(w, nil)
+	if err != nil {
+		slog.Error("Error while writing response", "err", err, "path", "/films/index.gmi")
+		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
+	}
+}
+
+func loadTemplate(raw string) (*template.Template, error) {
 	return template.New("film").Funcs(template.FuncMap{
 		"escape": escape,
-	}).Parse(cfg.FilmDisplay)
+	}).Parse(strings.TrimSpace(raw))
 }
 
 func escape(s string) string {
