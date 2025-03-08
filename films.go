@@ -32,7 +32,31 @@ var (
 		'ï': "i",
 		'î': "i",
 	}
+
+	filmsMap = map[string]*FilmConfig{}
 )
+
+func init() {
+	initDir(strings.TrimSuffix(filmsFolder, "/"))
+}
+
+func initDir(path string) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		panic(err)
+	}
+	for _, entry := range entries {
+		p := path + "/" + entry.Name()
+		if entry.IsDir() {
+			initDir(p)
+		} else {
+			_, err = loadFilm(p)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+}
 
 func handleFilms(ctx context.Context, w gemini.ResponseWriter, r *gemini.Request) {
 	path := r.URL.Path[len("/films"):]
@@ -40,7 +64,11 @@ func handleFilms(ctx context.Context, w gemini.ResponseWriter, r *gemini.Request
 		handleFilmsHome(ctx, w, r)
 		return
 	}
-	b, err := os.ReadFile(strings.TrimSuffix(filmsFolder, "/") + path + ".toml")
+	filmCfg, ok := filmsMap[path]
+	var err error
+	if !ok {
+		filmCfg, err = loadFilm(path)
+	}
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			w.WriteHeader(gemini.StatusNotFound, "Not found")
@@ -50,12 +78,6 @@ func handleFilms(ctx context.Context, w gemini.ResponseWriter, r *gemini.Request
 			w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
 			return
 		}
-	}
-	var filmCfg FilmConfig
-	if err = toml.Unmarshal(b, &filmCfg); err != nil {
-		slog.Error("Error while parsing file", "err", err, "path", r.URL.Path)
-		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
-		return
 	}
 	t, err := loadTemplate(cfg.Film.Display)
 	if err != nil {
@@ -83,6 +105,19 @@ func handleFilmsHome(_ context.Context, w gemini.ResponseWriter, _ *gemini.Reque
 		slog.Error("Error while writing response", "err", err, "path", "/films/index.gmi")
 		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
 	}
+}
+
+func loadFilm(path string) (*FilmConfig, error) {
+	b, err := os.ReadFile(strings.TrimSuffix(filmsFolder, "/") + path + ".toml")
+	if err != nil {
+		return nil, err
+	}
+	var filmCfg FilmConfig
+	if err = toml.Unmarshal(b, &filmCfg); err != nil {
+		return nil, err
+	}
+	filmsMap[path] = &filmCfg
+	return &filmCfg, nil
 }
 
 func loadTemplate(raw string) (*template.Template, error) {
