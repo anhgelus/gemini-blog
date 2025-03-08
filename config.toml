@@ -12,6 +12,7 @@ index = """
 """
 display = """
 # {{ .Title }}
+{{ .Author }}, {{ .Year }}
 {{ range .Tags }}
 => /films/tag/{{ escape . }} {{ . }}{{ end }}
 {{ range .Description }}
@@ -24,5 +25,5 @@ tag = """
 
 Films:
 {{ range .Films }}
-=> /films/{{ .Path }} {{ .Title }}{{ end }}
+=> /films/{{ .Path }} {{ .Title }} by {{ .Author }} ({{ .Year }}){{ end }}
 """

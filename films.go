@@ -14,6 +14,8 @@ import (
 
 type FilmConfig struct {
 	Title       string   `toml:"title"`
+	Author      string   `toml:"author"`
+	Year        int      `toml:"year"`
 	Description []string `toml:"description"`
 	Tags        []string `toml:"tags"`
 	Image       string   `toml:"image"`

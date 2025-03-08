@@ -1,4 +1,6 @@
 title = "Test"
+author = "John Doe"
+year = 2025
 
 description = [
     "Bonjour, je suis une description !",
