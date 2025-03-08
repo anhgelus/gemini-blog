@@ -1,0 +1,12 @@
+title = "Test 2"
+
+description = [
+    "Bonjour, je suis une description !",
+    "Sur plusieurs lignes en plus !"
+]
+
+tags = [
+    "Tag 1", "Tag 2"
+]
+
+image = "/"

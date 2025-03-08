@@ -22,6 +22,7 @@ type Config struct {
 	Film     struct {
 		Index   string `toml:"index"`
 		Display string `toml:"display"`
+		Tag     string `toml:"tag"`
 	} `toml:"film"`
 }
 
@@ -78,6 +79,7 @@ func main() {
 	}
 
 	mux := &gemini.Mux{}
+	mux.HandleFunc("/films/tag/", handleFilmsTag)
 	mux.HandleFunc("/films/", handleFilms)
 	mux.HandleFunc("/film", handleFilmsHome)
 	mux.Handle("/", gemini.FileServer(os.DirFS(publicFolder)))

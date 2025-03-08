@@ -2,8 +2,8 @@
 domain = "localhost"
 # duration of the certificate in hour
 duration = 1
-# display of /films/ (use go template format)
 
+# display of all contents in /films/ (use go template format)
 [film]
 index = """
 # Film
@@ -18,4 +18,11 @@ display = """
 {{.}}
 {{ end }}
 => {{ .Image }} Image de {{ .Title }}
+"""
+tag = """
+# {{ .Name }}
+
+Films:
+{{ range .Films }}
+=> /films/{{ .Path }} {{ .Title }}{{ end }}
 """

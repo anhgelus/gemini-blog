@@ -17,6 +17,12 @@ type FilmConfig struct {
 	Description []string `toml:"description"`
 	Tags        []string `toml:"tags"`
 	Image       string   `toml:"image"`
+	Path        string
+}
+
+type Tag struct {
+	Name  string
+	Films []*FilmConfig
 }
 
 var (
@@ -34,19 +40,27 @@ var (
 	}
 
 	filmsMap = map[string]*FilmConfig{}
+	tagsMap  = map[string]*Tag{}
 )
 
 func init() {
-	initDir(strings.TrimSuffix(filmsFolder, "/"))
+	initDir("")
 }
 
 func initDir(path string) {
-	entries, err := os.ReadDir(path)
+	var entries []os.DirEntry
+	var err error
+	if len(path) > 0 && path[0] == '/' {
+		entries, err = os.ReadDir(strings.TrimSuffix(filmsFolder, "/") + path)
+	} else {
+		entries, err = os.ReadDir(strings.TrimSuffix(filmsFolder, "/") + "/" + path)
+	}
 	if err != nil {
 		panic(err)
 	}
 	for _, entry := range entries {
-		p := path + "/" + entry.Name()
+		p := path + "/" + entry.Name()[:strings.LastIndex(entry.Name(), ".")]
+		println(p)
 		if entry.IsDir() {
 			initDir(p)
 		} else {
@@ -107,6 +121,26 @@ func handleFilmsHome(_ context.Context, w gemini.ResponseWriter, _ *gemini.Reque
 	}
 }
 
+func handleFilmsTag(_ context.Context, w gemini.ResponseWriter, r *gemini.Request) {
+	escaped := r.URL.Path[len("/films/tag/"):]
+	tag, ok := tagsMap[escaped]
+	if !ok {
+		w.WriteHeader(gemini.StatusNotFound, "Not found")
+		return
+	}
+	t, err := loadTemplate(cfg.Film.Tag)
+	if err != nil {
+		slog.Error("Error while parsing template", "err", err, "path", r.URL.Path)
+		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
+		return
+	}
+	err = t.Execute(w, tag)
+	if err != nil {
+		slog.Error("Error while writing response", "err", err, "path", r.URL.Path)
+		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
+	}
+}
+
 func loadFilm(path string) (*FilmConfig, error) {
 	b, err := os.ReadFile(strings.TrimSuffix(filmsFolder, "/") + path + ".toml")
 	if err != nil {
@@ -116,7 +150,16 @@ func loadFilm(path string) (*FilmConfig, error) {
 	if err = toml.Unmarshal(b, &filmCfg); err != nil {
 		return nil, err
 	}
+	filmCfg.Path = path[1:]
 	filmsMap[path] = &filmCfg
+	for _, t := range filmCfg.Tags {
+		tag, ok := tagsMap[escape(t)]
+		if !ok {
+			tag = &Tag{t, []*FilmConfig{}}
+			tagsMap[escape(t)] = tag
+		}
+		tag.Films = append(tag.Films, &filmCfg)
+	}
 	return &filmCfg, nil
 }
 
