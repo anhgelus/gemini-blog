@@ -7,14 +7,18 @@ duration = 1
 [film]
 index = """
 # Film
-{{ range .Films }}
-=> /films/{{.Path}} {{ .Title }}{{ end }}
+
+Tags: {{ range .Tags }}
+=> /films/tag/{{ escape .Name }} {{ .Name }} {{ end }}
+
+Available films: {{ range .Films }}
+=> /films/{{ .Path }} {{ .Title }} by {{ .Author }} ({{ .Year }}) {{ end }}
 """
 display = """
 # {{ .Title }}
 {{ .Author }}, {{ .Year }}
 {{ range .Tags }}
-=> /films/tag/{{ escape . }} {{ . }}{{ end }}
+=> /films/tag/{{ escape . }} {{ . }} {{ end }}
 {{ range .Description }}
 {{.}}
 {{ end }}
@@ -23,7 +27,6 @@ display = """
 tag = """
 # {{ .Name }}
 
-Films:
-{{ range .Films }}
-=> /films/{{ .Path }} {{ .Title }} by {{ .Author }} ({{ .Year }}){{ end }}
+Films: {{ range .Films }}
+=> /films/{{ .Path }} {{ .Title }} by {{ .Author }} ({{ .Year }}) {{ end }}
 """

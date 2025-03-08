@@ -27,6 +27,11 @@ type Tag struct {
 	Films []*FilmConfig
 }
 
+type homeData struct {
+	Films map[string]*FilmConfig
+	Tags  map[string]*Tag
+}
+
 var (
 	escapeChars = map[rune]string{
 		'é': "e",
@@ -116,7 +121,7 @@ func handleFilmsHome(_ context.Context, w gemini.ResponseWriter, _ *gemini.Reque
 		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
 		return
 	}
-	err = t.Execute(w, nil)
+	err = t.Execute(w, &homeData{filmsMap, tagsMap})
 	if err != nil {
 		slog.Error("Error while writing response", "err", err, "path", "/films/index.gmi")
 		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
