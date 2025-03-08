@@ -1,1 +1,4 @@
+# domain to use when creating the certificate (could be *)
 domain = "localhost"
+# duration of the certificate in hour
+duration = 1

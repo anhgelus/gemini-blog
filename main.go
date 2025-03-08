@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509/pkix"
 	"errors"
 	"flag"
 	"git.sr.ht/~sotirisp/go-gemini"
@@ -14,7 +16,8 @@ import (
 )
 
 type Config struct {
-	Domain string `toml:"domain"`
+	Domain   string `toml:"domain"`
+	Duration uint   `toml:"duration"`
 }
 
 var (
@@ -48,9 +51,20 @@ func main() {
 		panic(err)
 	}
 
-	certificates := &certificate.Store{}
-	certificates.Register(cfg.Domain)
-	if err = certificates.Load(certsFolder); err != nil {
+	certs := &certificate.Store{}
+	certs.CreateCertificate = func(scope string) (tls.Certificate, error) {
+		options := certificate.CreateOptions{
+			Subject: pkix.Name{
+				CommonName: scope,
+			},
+			DNSNames: []string{scope},
+			Duration: time.Duration(cfg.Duration) * time.Hour,
+		}
+		slog.Info("Creating certificate", "scope", scope, "duration", cfg.Duration)
+		return certificate.Create(options)
+	}
+	certs.Register(cfg.Domain)
+	if err = certs.Load(certsFolder); err != nil {
 		panic(err)
 	}
 
@@ -61,7 +75,7 @@ func main() {
 		Handler:        gemini.LoggingMiddleware(mux),
 		ReadTimeout:    30 * time.Second,
 		WriteTimeout:   1 * time.Minute,
-		GetCertificate: certificates.Get,
+		GetCertificate: certs.Get,
 	}
 
 	// starts the server
