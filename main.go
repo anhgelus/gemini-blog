@@ -9,27 +9,40 @@ import (
 	"git.sr.ht/~sotirisp/go-gemini"
 	"git.sr.ht/~sotirisp/go-gemini/certificate"
 	"github.com/BurntSushi/toml"
+	"io/fs"
 	"log/slog"
+	"mime"
 	"os"
 	"os/signal"
 	"time"
 )
 
 type Config struct {
-	Domain   string `toml:"domain"`
-	Duration uint   `toml:"duration"`
+	Domain      string `toml:"domain"`
+	Duration    uint   `toml:"duration"`
+	FilmDisplay string `toml:"film_display"`
 }
 
 var (
 	configFile   = "config.toml"
 	certsFolder  = "certs"
 	publicFolder = "public"
+	filmsFolder  = "films"
+
+	filmsContent fs.FS
+
+	cfg Config
 )
 
 func init() {
 	flag.StringVar(&configFile, "config", configFile, "config file")
 	flag.StringVar(&certsFolder, "certs-folder", certsFolder, "certificates folder")
 	flag.StringVar(&publicFolder, "public-folder", publicFolder, "public folder")
+	flag.StringVar(&filmsFolder, "films-folder", filmsFolder, "films folder")
+
+	if err := mime.AddExtensionType(".gmi", "text/gemini"); err != nil {
+		panic(err)
+	}
 }
 
 func main() {
@@ -39,17 +52,15 @@ func main() {
 		slog.Info(configFile)
 		panic(err)
 	}
-	var cfg Config
 	if err = toml.Unmarshal(b, &cfg); err != nil {
 		panic(err)
 	}
 
-	if err = os.Mkdir(certsFolder, 0755); err != nil && !errors.Is(err, os.ErrExist) {
-		panic(err)
-	}
-	if err = os.Mkdir(publicFolder, 0755); err != nil && !errors.Is(err, os.ErrExist) {
-		panic(err)
-	}
+	createFolder(certsFolder)
+	createFolder(publicFolder)
+	createFolder(filmsFolder)
+
+	filmsContent = os.DirFS(filmsFolder)
 
 	certs := &certificate.Store{}
 	certs.CreateCertificate = func(scope string) (tls.Certificate, error) {
@@ -69,6 +80,7 @@ func main() {
 	}
 
 	mux := &gemini.Mux{}
+	mux.HandleFunc("/films/", filmsHandler)
 	mux.Handle("/", gemini.FileServer(os.DirFS(publicFolder)))
 
 	server := &gemini.Server{
@@ -99,5 +111,11 @@ func main() {
 		if err = server.Shutdown(ctx); err != nil {
 			panic(err)
 		}
+	}
+}
+
+func createFolder(name string) {
+	if err := os.Mkdir(name, 0755); err != nil && !errors.Is(err, os.ErrExist) {
+		panic(err)
 	}
 }

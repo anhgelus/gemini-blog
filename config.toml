@@ -2,3 +2,13 @@
 domain = "localhost"
 # duration of the certificate in hour
 duration = 1
+# display of /films/ (use go template format)
+film_display = """
+# {{ .Title }}
+{{ range .Tags }}
+=> /films/tag/{{ escape . }} {{ . }}{{ end }}
+{{ range .Description }}
+{{.}}
+{{ end }}
+=> {{ .Image }} Image de {{ .Title }}
+"""
