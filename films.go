@@ -46,15 +46,14 @@ var (
 		'î': "i",
 	}
 
-	filmsMap = map[string]*FilmConfig{}
-	tagsMap  = map[string]*Tag{}
+	filmsMap map[string]*FilmConfig
+	tagsMap  map[string]*Tag
 )
 
-func init() {
-	initDir("")
-}
-
 func initDir(path string) {
+	if filmsMap == nil {
+		filmsMap = make(map[string]*FilmConfig)
+	}
 	var entries []os.DirEntry
 	var err error
 	if len(path) > 0 && path[0] == '/' {
@@ -79,6 +78,9 @@ func initDir(path string) {
 }
 
 func handleFilms(ctx context.Context, w gemini.ResponseWriter, r *gemini.Request) {
+	if filmsMap == nil {
+		initDir("")
+	}
 	path := r.URL.Path[len("/films"):]
 	if path == "/" || path == "/index.gmi" {
 		handleFilmsHome(ctx, w, r)
@@ -114,6 +116,9 @@ func handleFilms(ctx context.Context, w gemini.ResponseWriter, r *gemini.Request
 }
 
 func handleFilmsHome(_ context.Context, w gemini.ResponseWriter, _ *gemini.Request) {
+	if filmsMap == nil {
+		initDir("")
+	}
 	t, err := loadTemplate(cfg.Film.Index)
 	if err != nil {
 		slog.Error("Error while parsing template", "err", err, "path", "/films/index.gmi")
@@ -128,6 +133,9 @@ func handleFilmsHome(_ context.Context, w gemini.ResponseWriter, _ *gemini.Reque
 }
 
 func handleFilmsTag(_ context.Context, w gemini.ResponseWriter, r *gemini.Request) {
+	if filmsMap == nil {
+		initDir("")
+	}
 	escaped := r.URL.Path[len("/films/tag/"):]
 	tag, ok := tagsMap[escaped]
 	if !ok {
@@ -148,6 +156,9 @@ func handleFilmsTag(_ context.Context, w gemini.ResponseWriter, r *gemini.Reques
 }
 
 func loadFilm(path string) (*FilmConfig, error) {
+	if tagsMap == nil {
+		tagsMap = make(map[string]*Tag)
+	}
 	b, err := os.ReadFile(strings.TrimSuffix(filmsFolder, "/") + path + ".toml")
 	if err != nil {
 		return nil, err
