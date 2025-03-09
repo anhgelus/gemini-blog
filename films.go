@@ -67,7 +67,6 @@ func initDir(path string) {
 	}
 	for _, entry := range entries {
 		p := path + "/" + entry.Name()[:strings.LastIndex(entry.Name(), ".")]
-		println(p)
 		if entry.IsDir() {
 			initDir(p)
 		} else {
