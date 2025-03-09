@@ -6,6 +6,7 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"flag"
+	"fmt"
 	"git.sr.ht/~sotirisp/go-gemini"
 	"git.sr.ht/~sotirisp/go-gemini/certificate"
 	"github.com/BurntSushi/toml"
@@ -27,10 +28,11 @@ type Config struct {
 }
 
 var (
-	configFile   = "config.toml"
-	certsFolder  = "certs"
-	publicFolder = "public"
-	filmsFolder  = "films"
+	configFile        = "config.toml"
+	certsFolder       = "certs"
+	publicFolder      = "public"
+	filmsFolder       = "films"
+	port         uint = 1965
 
 	cfg Config
 )
@@ -40,6 +42,7 @@ func init() {
 	flag.StringVar(&certsFolder, "certs-folder", certsFolder, "certificates folder")
 	flag.StringVar(&publicFolder, "public-folder", publicFolder, "public folder")
 	flag.StringVar(&filmsFolder, "films-folder", filmsFolder, "films folder")
+	flag.UintVar(&port, "port", port, "port to use")
 
 	if err := mime.AddExtensionType(".gmi", "text/gemini"); err != nil {
 		panic(err)
@@ -68,7 +71,7 @@ func main() {
 				CommonName: scope,
 			},
 			DNSNames: []string{scope},
-			Duration: time.Duration(cfg.Duration) * time.Hour,
+			Duration: time.Duration(cfg.Duration) * 24 * time.Hour,
 		}
 		slog.Info("Creating certificate", "scope", scope, "duration", cfg.Duration)
 		return certificate.Create(options)
@@ -89,6 +92,7 @@ func main() {
 		ReadTimeout:    30 * time.Second,
 		WriteTimeout:   1 * time.Minute,
 		GetCertificate: certs.Get,
+		Addr:           fmt.Sprintf(":%d", port),
 	}
 
 	// starts the server
