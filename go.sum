@@ -1,0 +1,8 @@
+git.sr.ht/~sotirisp/go-gemini v0.0.0-20241120232757-f2c5ece7cd6e h1:ON7kTCoZoet0eYiPwMbyRFC4DDHxGow8xr4a9qr9soA=
+git.sr.ht/~sotirisp/go-gemini v0.0.0-20241120232757-f2c5ece7cd6e/go.mod h1:AI0uMgW2j5RNJr3KXzcidcVQVBmCNSVQkhPwqRyUHyk=
+github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
+github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
+golang.org/x/net v0.37.0 h1:1zLorHbz+LYj7MQlSf1+2tPIIgibq2eL5xkrGk6f+2c=
+golang.org/x/net v0.37.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
+golang.org/x/text v0.23.0 h1:D71I7dUrlY+VX0gQShAThNGHFxZ13dGLBHQLVl1mJlY=
+golang.org/x/text v0.23.0/go.mod h1:/BLNzu4aZCJ1+kcD0DNRotWKage4q2rGVAg4o22unh4=
