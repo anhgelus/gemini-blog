@@ -22,14 +22,15 @@ type FilmConfig struct {
 	Path        string
 }
 
-type Tag struct {
+type Data struct {
 	Name  string
 	Films []*FilmConfig
 }
 
 type homeData struct {
-	Films map[string]*FilmConfig
-	Tags  map[string]*Tag
+	Films   map[string]*FilmConfig
+	Tags    map[string]*Data
+	Authors map[string]*Data
 }
 
 var (
@@ -46,8 +47,9 @@ var (
 		'î': "i",
 	}
 
-	filmsMap map[string]*FilmConfig
-	tagsMap  map[string]*Tag
+	filmsMap   map[string]*FilmConfig
+	tagsMap    map[string]*Data
+	authorsMap map[string]*Data
 )
 
 func initDir(path string) {
@@ -125,7 +127,7 @@ func handleFilmsHome(_ context.Context, w gemini.ResponseWriter, _ *gemini.Reque
 		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
 		return
 	}
-	err = t.Execute(w, &homeData{filmsMap, tagsMap})
+	err = t.Execute(w, &homeData{filmsMap, tagsMap, authorsMap})
 	if err != nil {
 		slog.Error("Error while writing response", "err", err, "path", "/films/index.gmi")
 		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
@@ -155,9 +157,35 @@ func handleFilmsTag(_ context.Context, w gemini.ResponseWriter, r *gemini.Reques
 	}
 }
 
+func handleFilmsAuthor(_ context.Context, w gemini.ResponseWriter, r *gemini.Request) {
+	if filmsMap == nil {
+		initDir("")
+	}
+	escaped := r.URL.Path[len("/films/author/"):]
+	tag, ok := authorsMap[escaped]
+	if !ok {
+		w.WriteHeader(gemini.StatusNotFound, "Not found")
+		return
+	}
+	t, err := loadTemplate(cfg.Film.Tag)
+	if err != nil {
+		slog.Error("Error while parsing template", "err", err, "path", r.URL.Path)
+		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
+		return
+	}
+	err = t.Execute(w, tag)
+	if err != nil {
+		slog.Error("Error while writing response", "err", err, "path", r.URL.Path)
+		w.WriteHeader(gemini.StatusPermanentFailure, "Internal error")
+	}
+}
+
 func loadFilm(path string) (*FilmConfig, error) {
 	if tagsMap == nil {
-		tagsMap = make(map[string]*Tag)
+		tagsMap = make(map[string]*Data)
+	}
+	if authorsMap == nil {
+		authorsMap = make(map[string]*Data)
 	}
 	b, err := os.ReadFile(strings.TrimSuffix(filmsFolder, "/") + path + ".toml")
 	if err != nil {
@@ -168,11 +196,18 @@ func loadFilm(path string) (*FilmConfig, error) {
 		return nil, err
 	}
 	filmCfg.Path = path[1:]
+	// add to maps
 	filmsMap[path] = &filmCfg
+	author, ok := authorsMap[escape(filmCfg.Author)]
+	if !ok {
+		author = &Data{filmCfg.Author, []*FilmConfig{}}
+		authorsMap[escape(filmCfg.Author)] = author
+	}
+	author.Films = append(author.Films, &filmCfg)
 	for _, t := range filmCfg.Tags {
 		tag, ok := tagsMap[escape(t)]
 		if !ok {
-			tag = &Tag{t, []*FilmConfig{}}
+			tag = &Data{t, []*FilmConfig{}}
 			tagsMap[escape(t)] = tag
 		}
 		tag.Films = append(tag.Films, &filmCfg)

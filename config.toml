@@ -7,6 +7,8 @@ duration = 1
 [film]
 index = """
 # Film
+Authors: {{ range .Authors }}
+=> /films/author/{{ escape .Name }} {{ .Name }} {{ end }}
 
 Tags: {{ range .Tags }}
 => /films/tag/{{ escape .Name }} {{ .Name }} {{ end }}
@@ -16,7 +18,7 @@ Available films: {{ range .Films }}
 """
 display = """
 # {{ .Title }}
-{{ .Author }}, {{ .Year }}
+=> /films/author/{{ escape .Author }} {{ .Author }}, {{ .Year }}
 {{ range .Tags }}
 => /films/tag/{{ escape . }} {{ . }} {{ end }}
 {{ range .Description }}

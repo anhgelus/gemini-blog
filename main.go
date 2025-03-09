@@ -83,6 +83,7 @@ func main() {
 
 	mux := &gemini.Mux{}
 	mux.HandleFunc("/films/tag/", handleFilmsTag)
+	mux.HandleFunc("/films/author/", handleFilmsAuthor)
 	mux.HandleFunc("/films/", handleFilms)
 	mux.HandleFunc("/film", handleFilmsHome)
 	mux.Handle("/", gemini.FileServer(os.DirFS(publicFolder)))
